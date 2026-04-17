@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI AVG Risico Scanner</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel (Zorgt ervoor dat de React code in de browser werkt) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS voor de styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons (Icoontjes) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- HTML2PDF voor de export functie -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* Print specifieke styling */
+        @media print {
+            body { background-color: white !important; }
+            .print\:hidden { display: none !important; }
+            .print\:p-0 { padding: 0 !important; }
+            .print\:m-0 { margin: 0 !important; }
+            .print\:shadow-none { box-shadow: none !important; }
+            .print\:border-none { border: none !important; }
+            .print\:break-inside-avoid { break-inside: avoid !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- CONFIGURATIE VAN TOOLS EN REGELS ---
+        const AI_TOOLS = [
+          { 
+            id: 'chatgpt_free', 
+            name: 'ChatGPT (Gratis / Plus)', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "OpenAI gebruikt in de gratis en Plus-versies standaard jouw invoer (prompts en uploads) om hun AI-modellen te trainen. Data wordt primair verwerkt op servers in de VS. Het risico hierbij is dat ingevoerde gegevens (ook persoonsgegevens) gereproduceerd kunnen worden in antwoorden aan andere gebruikers wereldwijd. Zonder expliciete opt-out of enterprise-licentie is er geen sluitende AVG-verwerkersovereenkomst (DPA)."
+          },
+          { 
+            id: 'copilot_edu', 
+            name: 'Microsoft Copilot (met schoolaccount)', 
+            dataTraining: false, 
+            dpa: true,
+            processingTerms: "Wanneer je inlogt met een Entra ID (schoolaccount) is 'Commercial Data Protection' geactiveerd. Microsoft garandeert in haar onderwijsvoorwaarden dat invoer en gegenereerde antwoorden níét worden opgeslagen en níét worden gebruikt om hun basismodellen te trainen. Gegevensverwerking valt onder de robuuste, bestaande Microsoft-verwerkersovereenkomst van de instelling (veelal met dataopslag binnen de EU/EER)."
+          },
+          { 
+            id: 'claude', 
+            name: 'Claude (Anthropic)', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "Onder de standaard consumentenvoorwaarden van Anthropic behoudt het bedrijf zich het recht voor om invoer te gebruiken voor modeltraining en verbetering van de dienst. Dataverwerking en -opslag vindt voornamelijk plaats in de Verenigde Staten, wat doorgifterisico's oplevert voor persoonsgegevens zonder dat daar een getekende verwerkersovereenkomst voor de school tegenover staat."
+          },
+          { 
+            id: 'midjourney', 
+            name: 'Midjourney', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "Standaard zijn alle gegenereerde afbeeldingen en de gebruikte prompts openbaar zichtbaar in de openbare Midjourney galerij. Daarnaast behoudt Midjourney het recht om de invoer (inclusief referentie-afbeeldingen) te gebruiken voor verdere training van hun modellen. Dit maakt de tool fundamenteel ongeschikt en risicovol voor enige vorm van privacygevoelige, herleidbare of auteursrechtelijk beschermde visuele data."
+          },
+          { 
+            id: 'heygen', 
+            name: 'HeyGen', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "HeyGen verwerkt sterk gevoelige data (zoals stem en gezicht/biometrie) op cloudservers (veelal via AWS, wereldwijd). Hoewel ze stellen data niet te verkopen, bieden de standaardvoorwaarden onvoldoende garanties tegen AI-training en ontbreekt een specifieke EU-onderwijs-DPA. Het invoeren van beeldmateriaal van studenten of docenten is zonder toestemming en formele overeenkomst een zeer groot privacyrisico (AVG)."
+          },
+          { 
+            id: 'gamma', 
+            name: 'Gamma.AI', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "De standaard (gratis en pro) versie kent geen sluitende verwerkersovereenkomst die voldoet aan de Nederlandse onderwijseisen. Data (inclusief geüploade documenten voor presentaties) wordt veelal op Amerikaanse servers verwerkt en kan gebruikt worden om de dienstverlening te optimaliseren. Opslag van persoonsgegevens in deze tool vormt direct een compliancerisico."
+          },
+          { 
+            id: 'notebooklm', 
+            name: 'NotebookLM (Google)', 
+            dataTraining: false, 
+            dpa: false,
+            processingTerms: "Google specificeert in de voorwaarden dat geüploade brondocumenten in NotebookLM níét worden gebruikt om hun basismodellen te trainen. Echter, tenzij het gebruik expliciet is afgedekt binnen een overkoepelende 'Google Workspace for Education' overeenkomst van de instelling, val je onder de algemene consumentenvoorwaarden. Hierbij ontbreekt de formele juridische borging (DPA) die vereist is voor de structurele verwerking van persoonsgegevens."
+          },
+          { 
+            id: 'genially', 
+            name: 'Genially', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "Onder de standaard consumentenvoorwaarden wordt ingevoerde data verwerkt om de online dienst te leveren en te optimaliseren. Hoewel Genially deels Europees is, is er bij een standaard account geen getekende verwerkersovereenkomst. Het risico is beperkt bij pure lesstof, maar hoog zodra je persoonsgegevens (zoals namen van studenten in escape-rooms) of cijfers verwerkt."
+          },
+          { 
+            id: 'gemini_free', 
+            name: 'Gemini (Gratis)', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "Valt onder de standaard Google-consumentenvoorwaarden. Google geeft zeer expliciet aan dat gesprekken en invoer kunnen worden gelezen door menselijke reviewers (annotators) ter kwaliteitscontrole, en gebruikt worden om Google-producten en AI-modellen te trainen. Het invoeren van enige vorm van persoonsgegevens, vertrouwelijke informatie of leerlingdata is hierdoor een acuut datalek en zeer hoog risico."
+          },
+          { 
+            id: 'gemini_edu', 
+            name: 'Gemini (met schoolaccount)', 
+            dataTraining: false, 
+            dpa: true,
+            processingTerms: "Bij inlog met een 'Google Workspace for Education' account gelden de enterprise-voorwaarden. Google garandeert hierin dat jouw prompts (invoer) en de gegenereerde antwoorden níét worden gebruikt om de Gemini basismodellen te trainen, en ook niet toegankelijk zijn voor menselijke reviewers. Dit valt onder de bestaande, getekende verwerkersovereenkomst met de school, waardoor dit het laagste risicoprofiel heeft voor dataverwerking."
+          },
+          { 
+            id: 'other', 
+            name: 'Een andere (onbekende) AI-tool', 
+            dataTraining: true, 
+            dpa: false,
+            processingTerms: "Omdat de specifieke voorwaarden van deze tool onbekend zijn, gaat de analyse uit van het 'worst-case' scenario voor consumententools. Dit betekent: data wordt veelal verwerkt in de VS zonder adequate waarborgen (risico op onrechtmatige doorgifte), de invoer wordt gebruikt om het AI-model verder te trainen (risico op een datalek), en er ontbreekt een wettelijk verplichte Verwerkersovereenkomst (DPA)."
+          },
+        ];
+
+        const DATA_TYPES = [
+          { id: 'none', label: 'Geen persoonsgegevens', description: 'Algemene teksten, lesstof, anonieme voorbeelden.', riskLevel: 0 },
+          { id: 'basic', label: 'Basis persoonsgegevens', description: 'Namen, e-mailadressen, of herleidbare context van studenten/collega\'s.', riskLevel: 1 },
+          { id: 'sensitive', label: 'Gevoelige / Bijzondere persoonsgegevens', description: 'Cijfers, beoordelingen, medische gegevens, zorgdossiers of BSN-nummers.', riskLevel: 2 }
+        ];
+
+        const genericTextCases = [
+          { id: 'txt1', label: 'Lesvoorbereidingen maken', levels: ['prep'], aiActHighRisk: false },
+          { id: 'txt2', label: 'Lesmateriaal ontwikkelen', levels: ['prep', 'didactic'], aiActHighRisk: false },
+          { id: 'txt3', label: 'Toetsen en quizzen ontwerpen', levels: ['prep', 'didactic'], aiActHighRisk: false },
+          { id: 'txt4', label: 'Differentiëren', levels: ['didactic', 'guidance'], aiActHighRisk: false },
+          { id: 'txt5', label: 'Administratie en correspondentie', levels: ['prep'], aiActHighRisk: false },
+          { id: 'txt_fb', label: 'Nakijken of feedback schrijven (Let op!)', levels: ['prep', 'guidance'], aiActHighRisk: true },
+        ];
+
+        const USE_CASES_PER_TOOL = {
+          chatgpt_free: genericTextCases,
+          gemini_free: genericTextCases,
+          gemini_edu: genericTextCases,
+          copilot_edu: genericTextCases,
+          claude: [
+            { id: 'cl1', label: 'Bronnen analyseren (samenvatten)', levels: ['prep', 'didactic', 'guidance'], aiActHighRisk: false },
+            { id: 'cl2', label: 'Feedback formuleren', levels: ['prep', 'guidance'], aiActHighRisk: true },
+            { id: 'cl3', label: 'Differentiëren (zeer sterk in taalnuances)', levels: ['didactic', 'guidance'], aiActHighRisk: false },
+          ],
+          gamma: [
+            { id: 'gam1', label: 'Presentaties maken', levels: ['prep', 'didactic'], aiActHighRisk: false },
+            { id: 'gam2', label: 'Lesmateriaal ontwikkelen (visueel)', levels: ['prep', 'didactic'], aiActHighRisk: false },
+          ],
+          genially: [
+            { id: 'gen1', label: 'Interactieve werkvormen maken', levels: ['didactic', 'prep'], aiActHighRisk: false },
+            { id: 'gen2', label: 'Lesmateriaal ontwikkelen (interactief)', levels: ['didactic', 'prep'], aiActHighRisk: false },
+          ],
+          notebooklm: [
+            { id: 'not1', label: 'Bronnen analyseren (vragen stellen over eigen PDF\'s/boeken)', levels: ['prep', 'didactic', 'guidance'], aiActHighRisk: false },
+            { id: 'not2', label: 'Lesmateriaal ontwikkelen', levels: ['prep', 'didactic'], aiActHighRisk: false },
+          ],
+          heygen: [
+            { id: 'hey1', label: 'Instructievideo\'s maken', levels: ['prep', 'didactic', 'guidance'], aiActHighRisk: false },
+          ],
+          midjourney: [
+            { id: 'mid1', label: 'Beeldmateriaal genereren', levels: ['prep', 'didactic'], aiActHighRisk: false },
+          ],
+          other: [
+            { id: 'oth1', label: 'Lesvoorbereiding en administratie', levels: ['prep'], aiActHighRisk: false },
+            { id: 'oth2', label: 'Didactische inzet (presentaties, video)', levels: ['didactic'], aiActHighRisk: false },
+            { id: 'oth3', label: 'Nakijken of begeleiden van leerlingen', levels: ['guidance', 'prep'], aiActHighRisk: true },
+          ]
+        };
+
+        function App() {
+          const [activeTab, setActiveTab] = useState('wizard');
+          const [history, setHistory] = useState([]);
+          
+          const [step, setStep] = useState(0);
+          const [selectedTool, setSelectedTool] = useState('');
+          const [useCase, setUseCase] = useState('');
+          const [dataType, setDataType] = useState('');
+          const [ipRisk, setIpRisk] = useState('');
+          const [currentResult, setCurrentResult] = useState(null);
+          
+          const [showExtendedReport, setShowExtendedReport] = useState(false);
+
+          const handleNext = () => setStep(prev => prev + 1);
+          const handlePrev = () => setStep(prev => prev - 1);
+          const handleReset = () => {
+            setStep(0);
+            setSelectedTool('');
+            setUseCase('');
+            setDataType('');
+            setIpRisk('');
+            setCurrentResult(null);
+            setShowExtendedReport(false);
+          };
+
+          const getFilteredUseCases = () => {
+            if (!selectedTool) return [];
+            const casesForTool = USE_CASES_PER_TOOL[selectedTool] || USE_CASES_PER_TOOL['other'];
+            const filtered = [...casesForTool];
+            filtered.push({ id: 'custom_other', label: 'Anders...', aiActHighRisk: false });
+            return filtered;
+          };
+
+          const calculateRiskLogic = () => {
+            const tool = AI_TOOLS.find(t => t.id === selectedTool);
+            const data = DATA_TYPES.find(d => d.id === dataType);
+            const casesForTool = USE_CASES_PER_TOOL[selectedTool] || USE_CASES_PER_TOOL['other'];
+            const allPossibleCases = [...casesForTool, { id: 'custom_other', label: 'Anders...', aiActHighRisk: false }];
+            const uc = allPossibleCases.find(u => u.id === useCase);
+
+            if (!tool || !data || !uc || !ipRisk) return null;
+
+            let result = { level: 'low', title: '', color: '', icon: null, avgMessage: '', aiActMessage: '', actionable: [] };
+
+            if (uc.aiActHighRisk) {
+              result.aiActMessage = "De Europese AI-act classificeert AI gebruikt voor evaluatie of beoordeling van studenten als 'Hoog Risico' (Bijlage III). Je bent wettelijk verplicht te zorgen voor betekenisvolle menselijke tussenkomst (Human-in-the-loop). Volledig geautomatiseerde besluiten over studenten zijn verboden en er moet gelet worden op algoritmische bias (vooroordelen).";
+            } else {
+              result.aiActMessage = "Voor dit doel valt de inzet onder 'Beperkt Risico' of 'Minimaal Risico' in de AI-Act. Er geldt wel een transparantieverplichting: studenten moeten worden geïnformeerd als lesmateriaal of teksten door AI zijn gegenereerd of bewerkt.";
+            }
+
+            if (data.riskLevel === 2) {
+              if (tool.dpa && !tool.dataTraining) {
+                result.level = 'medium';
+                result.title = 'Oranje: Overleg vereist (DPIA nodig)';
+                result.avgMessage = 'Je verwerkt sterk gevoelige gegevens (zoals cijfers of medische data). Omdat je een beveiligde school-omgeving gebruikt is de data contractueel afgeschermd, maar voor dit type sterk gevoelige data is onder de AVG vrijwel altijd een Data Protection Impact Assessment (DPIA) vereist voorafgaand aan de verwerking.';
+                result.color = 'bg-orange-100 border-orange-400 text-orange-800';
+                result.icon = <i className="ph-fill ph-warning-circle text-[32px] text-orange-500"></i>;
+                result.actionable = ['Controleer bij de FG of er een DPIA is uitgevoerd voor dit specifieke doel en deze tool.', 'Pas strikte dataminimalisatie toe.', 'Zorg voor een menselijke eindcontrole (Human-in-the-loop).'];
+              } else {
+                result.level = 'high';
+                result.title = 'Rood: Niet toegestaan (Hoog Risico)';
+                result.avgMessage = 'Het is onder de AVG ten strengste verboden om gevoelige persoonsgegevens in externe/commerciële AI-tools in te voeren. Deze data kan gebruikt worden voor het trainen van modellen en lekken naar derde partijen.';
+                result.color = 'bg-red-100 border-red-400 text-red-800';
+                result.icon = <i className="ph ph-shield text-[32px] text-red-600"></i>;
+                result.actionable = ['Stop direct: gebruik deze tool niet voor dit doel.', 'Anonimiseer alle persoonsgegevens volledig (verwijder namen, context, cijfers) voordat je AI overweegt.', 'Raadpleeg de FG voor een goedgekeurd, intern alternatief.'];
+              }
+            } else if (data.riskLevel === 1) {
+              if (tool.dataTraining || !tool.dpa) {
+                result.level = 'high';
+                result.title = 'Rood: Niet toegestaan (Datalek / Training)';
+                result.avgMessage = `Je verwerkt persoonsgegevens in een tool (${tool.name}) zonder verwerkersovereenkomst en die mogelijk traint op jouw data. Dit is een inbreuk op de AVG (datalek/ongeoorloofde verwerking).`;
+                result.color = 'bg-red-100 border-red-400 text-red-800';
+                result.icon = <i className="ph ph-shield text-[32px] text-red-600"></i>;
+                result.actionable = ['Gebruik een door de school goedgekeurd alternatief (bijv. interne Copilot/Gemini).', 'Vervang namen door fictieve letters (Student A, Student B) om te anonimiseren.'];
+              } else {
+                result.level = 'medium';
+                result.title = 'Oranje: Veilig, mits terughoudend';
+                result.avgMessage = `Je gebruikt een afgeschermde omgeving (${tool.name}). Contractueel is geborgd dat data niet gebruikt wordt voor training. De AVG staat dit toe, mits het noodzakelijk is voor je taak.`;
+                result.color = 'bg-orange-100 border-orange-400 text-orange-800';
+                result.icon = <i className="ph-fill ph-warning-circle text-[32px] text-orange-500"></i>;
+                result.actionable = ['Minimaliseer gegevens: voer geen overbodige persoonsgegevens in.', 'Houd de output kritisch in de gaten op hallucinaties.', 'Zorg voor transparantie naar betrokkenen (studenten).'];
+              }
+            } else if (data.riskLevel === 0) {
+              if (tool.dataTraining) {
+                result.level = 'low-warning';
+                result.title = 'Geel/Groen: Veilig (Let op IP & Auteursrecht)';
+                result.avgMessage = 'Omdat je géén persoonsgegevens invoert, is de AVG niet van toepassing. Let op: jouw invoer kan wel gebruikt worden om de tool te trainen. Deel geen ongepubliceerd onderzoek of examens.';
+                result.color = 'bg-green-100 border-green-400 text-green-800';
+                result.icon = <i className="ph-fill ph-check-circle text-[32px] text-green-600"></i>;
+                result.actionable = ['Je kunt veilig aan de slag.', 'Vermijd het delen van bedrijfsgeheimen of onuitgegeven toetsen.', 'Check feiten: AI kan output genereren die overtuigend maar onjuist is.'];
+              } else {
+                result.level = 'low';
+                result.title = 'Groen: Veilig in gebruik';
+                result.avgMessage = 'Je verwerkt geen persoonsgegevens in een afgeschermde omgeving. Zowel op het gebied van AVG als databeveiliging is dit de meest veilige optie.';
+                result.color = 'bg-green-100 border-green-500 text-green-800';
+                result.icon = <i className="ph-fill ph-check-circle text-[32px] text-green-600"></i>;
+                result.actionable = ['Geen privacyrisico\'s geïdentificeerd. Veel succes met je taak!', 'Blijf voldoen aan de transparantie-eis (meld AI-gebruik).'];
+              }
+            }
+
+            if (ipRisk === 'ip_secret') {
+              if (!tool.dpa || tool.dataTraining) {
+                result.level = 'high';
+                result.title = 'Rood: Niet toegestaan (Informatiebeveiliging / BIO)';
+                result.avgMessage = 'Waarschuwing! Je staat op het punt bedrijfsvertrouwelijke informatie (zoals geheime examens of beleidsstukken) te delen met een commerciële AI. Dit is een fors datalek en in strijd met het informatiebeveiligingsbeleid, ongeacht of er persoonsgegevens in zitten. ' + result.avgMessage;
+                result.color = 'bg-red-100 border-red-400 text-red-800';
+                result.icon = <i className="ph ph-shield text-[32px] text-red-600"></i>;
+                result.actionable.unshift('Verwijder direct alle bedrijfsvertrouwelijke informatie of examenvragen uit je prompt.');
+              } else {
+                if (result.level !== 'high') {
+                  result.level = 'medium';
+                  result.title = 'Oranje: Veilig, maar wees alert op vertrouwelijkheid';
+                  result.avgMessage += ' Let op: Je verwerkt bedrijfsvertrouwelijke informatie. Omdat dit een intern afgeschermde tool is, is er geen extern lek, maar wees terughoudend met het invoeren van bijvoorbeeld definitieve examens (ivm interne rechten).';
+                  result.color = 'bg-orange-100 border-orange-400 text-orange-800';
+                  result.icon = <i className="ph-fill ph-warning-circle text-[32px] text-orange-500"></i>;
+                }
+              }
+            } else if (ipRisk === 'ip_copyright') {
+               if (result.level !== 'high') {
+                   result.level = 'medium';
+                   result.title = 'Oranje: Risico op Auteursrechtenschending';
+                   result.avgMessage += ' Let op: het uploaden van andermans beschermde werken (zoals uitgeverij-boeken of artikelen) kan een schending van het auteursrecht zijn, zéker als de tool de data gebruikt voor training.';
+                   result.color = 'bg-orange-100 border-orange-400 text-orange-800';
+                   result.icon = <i className="ph-fill ph-warning-circle text-[32px] text-orange-500"></i>;
+                   result.actionable.unshift('Controleer of je toestemming hebt (of dat de citaatexceptie geldt) om dit auteursrechtelijk beschermde materiaal in een AI-tool te verwerken.');
+               }
+            }
+
+            if (uc.aiActHighRisk && result.level !== 'high') {
+              result.actionable.unshift('AI-ACT VEREISTE: Een docent móét het definitieve oordeel vellen. Het AI-voorstel mag slechts als advies dienen.');
+            }
+
+            return result;
+          };
+
+          const handleGenerateAssessment = () => {
+            const res = calculateRiskLogic();
+            setCurrentResult(res);
+            setStep(5);
+            
+            const casesForTool = USE_CASES_PER_TOOL[selectedTool] || USE_CASES_PER_TOOL['other'];
+            const allPossibleCases = [...casesForTool, { id: 'custom_other', label: 'Anders...', aiActHighRisk: false }];
+            const selectedUc = allPossibleCases.find(u => u.id === useCase);
+
+            const newEntry = {
+              id: Date.now(),
+              date: new Date().toLocaleString('nl-NL'),
+              toolName: AI_TOOLS.find(t => t.id === selectedTool)?.name,
+              useCaseName: selectedUc?.label,
+              dataTypeName: DATA_TYPES.find(d => d.id === dataType)?.label,
+              riskLevel: res.level,
+              aiActFlag: selectedUc?.aiActHighRisk ? 'Hoog Risico (Bijlage III)' : 'Beperkt/Minimaal',
+            };
+            setHistory([newEntry, ...history]);
+          };
+
+          const handleExportPDF = () => {
+            const element = document.getElementById('pdf-export-content');
+            if (!element) return;
+            const opt = {
+              margin: 10,
+              filename: `AVG_AI_Analyse_${Date.now()}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            window.html2pdf().set(opt).from(element).save();
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 font-sans text-gray-800 print:bg-white print:py-0 print:px-0">
+              <div className="max-w-4xl w-full flex gap-2 mb-4 print:hidden">
+                <button onClick={() => setActiveTab('wizard')} className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-semibold transition-colors ${activeTab === 'wizard' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                  <i className="ph-bold ph-house text-[16px]"></i> Analyse Tool
+                </button>
+                <button onClick={() => setActiveTab('history')} className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-semibold transition-colors ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                  <i className="ph-bold ph-list text-[16px]"></i> Mijn Historie
+                </button>
+                <button onClick={() => setActiveTab('admin')} className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-semibold transition-colors ml-auto ${activeTab === 'admin' ? 'bg-purple-700 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                  <i className="ph-fill ph-shield-check text-[16px]"></i> FG Beheerder
+                </button>
+              </div>
+
+              <div className="max-w-4xl w-full bg-white rounded-xl shadow-md p-8 min-h-[500px] flex flex-col print:shadow-none print:w-full print:max-w-none">
+                {activeTab === 'wizard' && (
+                  <>
+                    <div className="flex items-center justify-between border-b pb-4 mb-6 print:hidden">
+                      <div className="flex items-center gap-3">
+                        <i className="ph ph-shield text-[32px] text-blue-600"></i>
+                        <h1 className="text-2xl font-bold text-gray-800">AI, AVG & AI-Act Risico Scanner</h1>
+                      </div>
+                      <div className="text-sm font-medium text-gray-400">
+                        Stap {step === 0 ? '0' : step} van 4
+                      </div>
+                    </div>
+
+                    {step > 0 && step < 5 && (
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-8 print:hidden">
+                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(step / 4) * 100}%` }}></div>
+                      </div>
+                    )}
+
+                    {step === 0 && (
+                      <div className="flex-1 flex flex-col justify-center items-center text-center animate-in fade-in duration-300">
+                        <i className="ph-fill ph-book-open-text text-[64px] text-blue-500 mb-6"></i>
+                        <h2 className="text-3xl font-extrabold mb-4 text-gray-900">Veilig innoveren met AI</h2>
+                        <p className="text-lg text-gray-600 max-w-2xl mb-8">
+                          Voordat je een AI-tool inzet in het onderwijs, moeten we controleren of dit voldoet aan de <strong>privacywetgeving (AVG)</strong> en de nieuwe <strong>Europese AI-Act</strong>. Beantwoord enkele korte vragen voor een direct juridisch advies op maat.
+                        </p>
+                        <button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all flex items-center gap-2">
+                          Start de Analyse <i className="ph-bold ph-caret-right text-[20px]"></i>
+                        </button>
+                      </div>
+                    )}
+
+                    {step === 1 && (
+                      <div className="flex-1 animate-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold mb-2">1. Welke AI-tool wil je gebruiken?</h2>
+                        <p className="text-gray-500 mb-6">Selecteer de specifieke tool of het platform.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {AI_TOOLS.map((tool) => (
+                            <button
+                              key={tool.id}
+                              onClick={() => { setSelectedTool(tool.id); setUseCase(''); }}
+                              className={`p-4 text-left rounded-xl border-2 transition-all ${
+                                selectedTool === tool.id ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className="block font-semibold text-gray-800">{tool.name}</span>
+                              <span className="text-xs text-gray-500 mt-1 block">
+                                {tool.dpa ? 'Schooldomein / Beveiligd (Verwerkersovereenkomst)' : 'Openbaar / Commercieel'}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {step === 2 && (
+                      <div className="flex-1 animate-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold mb-2">2. Wat is je belangrijkste toepassing?</h2>
+                        <p className="text-gray-500 mb-6">Gefilterd op basis van <strong>{AI_TOOLS.find(t => t.id === selectedTool)?.name}</strong>.</p>
+                        <div className="space-y-3">
+                          {getFilteredUseCases().map((uc) => (
+                            <label key={uc.id} className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${useCase === uc.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                              <input type="radio" value={uc.id} checked={useCase === uc.id} onChange={(e) => setUseCase(e.target.value)} className="w-5 h-5 text-blue-600 shrink-0" />
+                              <span className="ml-3 font-medium text-gray-800">{uc.label}</span>
+                              {uc.aiActHighRisk && <span className="ml-auto text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold text-center shrink-0">AI-Act: Hoog Risico</span>}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {step === 3 && (
+                      <div className="flex-1 animate-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold mb-2">3. Welke gegevens ga je invoeren?</h2>
+                        <p className="text-gray-500 mb-6">Dit bepaalt het risico onder de Algemene Verordening Gegevensbescherming (AVG).</p>
+                        <div className="space-y-4">
+                          {DATA_TYPES.map((dt) => (
+                            <label key={dt.id} className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${dataType === dt.id ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                              <div className="flex items-center h-6">
+                                <input type="radio" value={dt.id} checked={dataType === dt.id} onChange={(e) => setDataType(e.target.value)} className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div className="ml-4 flex flex-col">
+                                <span className="font-bold text-gray-900">{dt.label}</span>
+                                <span className="text-sm text-gray-600 mt-1">{dt.description}</span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {step === 4 && (
+                      <div className="flex-1 animate-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold mb-2">4. Bevat de data auteursrecht of geheime informatie?</h2>
+                        <p className="text-gray-500 mb-6">Dit bepaalt het risico op het gebied van Informatiebeveiliging (BIO) en Intellectueel Eigendom.</p>
+                        <div className="space-y-4">
+                          <label className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${ipRisk === 'ip_none' ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                            <div className="flex items-center h-6"><input type="radio" value="ip_none" checked={ipRisk === 'ip_none'} onChange={(e) => setIpRisk(e.target.value)} className="w-5 h-5 text-blue-600" /></div>
+                            <div className="ml-4 flex flex-col">
+                              <span className="font-bold text-gray-900">Nee, geen van beide</span>
+                              <span className="text-sm text-gray-600 mt-1">Alleen eigen materialen, openbare bronnen of algemene tekst.</span>
+                            </div>
+                          </label>
+                          <label className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${ipRisk === 'ip_copyright' ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                            <div className="flex items-center h-6"><input type="radio" value="ip_copyright" checked={ipRisk === 'ip_copyright'} onChange={(e) => setIpRisk(e.target.value)} className="w-5 h-5 text-orange-600" /></div>
+                            <div className="ml-4 flex flex-col">
+                              <span className="font-bold text-gray-900">Ja, Auteursrechtelijk beschermd materiaal</span>
+                              <span className="text-sm text-gray-600 mt-1">Bijv. PDF's van commerciële lesmethoden, boeken van derden of wetenschappelijke artikelen achter een betaalmuur.</span>
+                            </div>
+                          </label>
+                          <label className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${ipRisk === 'ip_secret' ? 'border-red-500 bg-red-50 ring-2 ring-red-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                            <div className="flex items-center h-6"><input type="radio" value="ip_secret" checked={ipRisk === 'ip_secret'} onChange={(e) => setIpRisk(e.target.value)} className="w-5 h-5 text-red-600" /></div>
+                            <div className="ml-4 flex flex-col">
+                              <span className="font-bold text-gray-900">Ja, Bedrijfsvertrouwelijke / Geheime informatie</span>
+                              <span className="text-sm text-gray-600 mt-1">Bijv. nog niet afgenomen (concept) examenvragen, strategische notulen, of ongepubliceerd onderzoek.</span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {step === 5 && currentResult && (
+                      <div className="flex-1 flex flex-col animate-in fade-in duration-500">
+                        <div className="mb-4 flex flex-wrap gap-3 justify-end print:hidden">
+                          <button onClick={() => setShowExtendedReport(!showExtendedReport)} className="bg-white hover:bg-purple-50 text-purple-700 font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors border border-purple-200 shadow-sm">
+                            <i className="ph-bold ph-file-plus text-[16px]"></i> {showExtendedReport ? 'Verberg Uitgebreid Kader' : 'Toon Uitgebreid Besluitkader'}
+                          </button>
+                          <button onClick={handleExportPDF} className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors border border-blue-200 shadow-sm">
+                            <i className="ph-bold ph-file-arrow-down text-[16px]"></i> Download Rapport als PDF
+                          </button>
+                        </div>
+
+                        <div id="pdf-export-content" className="bg-white rounded-xl print:p-0 p-2">
+                          <div className="flex items-center gap-3 mb-6 border-b pb-4">
+                            <i className="ph-fill ph-shield-check text-[40px] text-gray-800"></i>
+                            <div>
+                              <h1 className="text-2xl font-bold">Rapportage AI-Inzet & Compliance</h1>
+                              <p className="text-sm text-gray-500">Gegenereerd op: {new Date().toLocaleString('nl-NL')}</p>
+                            </div>
+                          </div>
+
+                          <div className="mb-6 flex justify-between items-start">
+                            <div>
+                              <h2 className="text-2xl font-bold text-gray-900 mb-3">Compliance Adviesrapport (Triage)</h2>
+                              <div className="flex flex-wrap gap-2 text-sm">
+                                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-full">Tool: <strong>{AI_TOOLS.find(t=>t.id===selectedTool)?.name}</strong></span>
+                                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-full">Doel: <strong>{getFilteredUseCases().find(u=>u.id===useCase)?.label}</strong></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={`p-6 rounded-xl border-2 flex flex-col gap-3 mb-6 ${currentResult.color}`}>
+                            <div className="flex items-center gap-4">
+                              {currentResult.icon}
+                              <h3 className="text-xl font-extrabold">{currentResult.title}</h3>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                              <h4 className="font-bold text-gray-800 mb-2 border-b pb-2">1. AVG (Privacy) Toetsing</h4>
+                              <p className="text-gray-700 text-sm leading-relaxed">{currentResult.avgMessage}</p>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                              <h4 className="font-bold text-gray-800 mb-2 border-b pb-2">2. Europese AI-Act & Onderwijswet</h4>
+                              <p className="text-gray-700 text-sm leading-relaxed">{currentResult.aiActMessage}</p>
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-blue-200 rounded-xl p-5 shadow-sm mb-6 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                            <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2 border-b pb-2">
+                              <i className="ph-fill ph-database text-[20px] text-blue-600"></i> 3. Dataverwerking & Standaardvoorwaarden ({AI_TOOLS.find(t=>t.id===selectedTool)?.name})
+                            </h4>
+                            <p className="text-gray-700 text-sm leading-relaxed">
+                              {AI_TOOLS.find(t=>t.id===selectedTool)?.processingTerms}
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm">
+                            <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                              <i className="ph-fill ph-lock-key text-[20px] text-slate-500"></i> Vereiste acties voor de docent
+                            </h4>
+                            <ul className="space-y-3 text-slate-700 list-disc pl-5">
+                              {currentResult.actionable.map((action, idx) => (
+                                <li key={idx}>
+                                  {action.includes('AI-ACT VEREISTE') ? <strong className="text-purple-700">{action}</strong> : action}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {showExtendedReport && (
+                            <div className="mt-10 border-t-2 border-gray-200 pt-8 print:mt-8 print:break-inside-avoid">
+                              <h3 className="text-2xl font-bold text-gray-900 mb-4">Aanvullend Toetsingskader (Voor Definitief Besluit)</h3>
+                              <p className="text-gray-600 mb-6 italic">Dit rapport dient als eerste triage. Om tot een formeel en dekkend besluit te komen voor inzet van deze tool, dienen de volgende aspecten door de instelling te worden geborgd:</p>
+                              
+                              <div className="space-y-5">
+                                <div className="bg-white border border-purple-100 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                  <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><i className="ph-fill ph-briefcase text-[20px] text-purple-600"></i> 1. Informatiebeveiliging (Vertrouwelijkheid)</h4>
+                                  <p className="text-gray-700 text-sm leading-relaxed">De basisanalyse focust op persoonsgegevens (AVG). Echter, concept-examenvragen, ongepubliceerd onderzoek of strategische beleidsstukken invoeren in een commerciële AI (die traint op data) vormt een fors datalek (BIO-schending). Het delen van dergelijke bedrijfsvertrouwelijke informatie is niet toegestaan, tenzij afgeschermd in een bedrijfs-tenant.</p>
+                                </div>
+                                <div className="bg-white border border-purple-100 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                  <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><i className="ph-fill ph-scales text-[20px] text-purple-600"></i> 2. Auteursrecht en Intellectueel Eigendom (IP)</h4>
+                                  <p className="text-gray-700 text-sm leading-relaxed">Upload geen commerciële leermiddelen (bijv. PDF's van externe uitgevers) om samen te vatten, dit kan auteursrecht schenden. Stel bovendien vast bij wie het eigendomsrecht rust van de AI-gegenereerde lesmaterialen of presentaties (de school, de tool of niemand?).</p>
+                                </div>
+                                <div className="bg-white border border-purple-100 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                  <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><i className="ph-fill ph-buildings text-[20px] text-purple-600"></i> 3. Schoolspecifiek beleid & Verwerkingsregister</h4>
+                                  <p className="text-gray-700 text-sm leading-relaxed">Toets de voorgenomen inzet altijd aan het specifieke beleid van de instelling. Het kan zijn dat de schoolleiding bepaalde AI-inzet lokaal heeft verboden, ongeacht de AVG-veiligheid. Elke gebruikte tool die persoonsgegevens verwerkt moet daarnaast formeel worden opgenomen in het wettelijke Verwerkingsregister.</p>
+                                </div>
+                                <div className="bg-white border border-purple-100 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                  <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><i className="ph-fill ph-graduation-cap text-[20px] text-purple-600"></i> 4. Pedagogische en Ethische Visie</h4>
+                                  <p className="text-gray-700 text-sm leading-relaxed">Naast juridische inzetbaarheid rest de vraag: <em>Willen</em> we dit? Tast AI de relatie tussen docent en student aan? Zorgt automatisering voor luiheid of verlies van didactische kwaliteit? Deze afweging vereist een ethisch besluit op opleidingsniveau.</p>
+                                </div>
+                                <div className="bg-white border border-purple-100 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                  <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><i className="ph-bold ph-file-arrow-down text-[20px] text-purple-600"></i> 5. Formele DPIA Status</h4>
+                                  <p className="text-gray-700 text-sm leading-relaxed">Dit rapport is een triage. Voor structureel gebruik van tools die op structurele schaal (gevoelige) persoonsgegevens verwerken of studenten profileren, is een formele <em>Data Protection Impact Assessment</em> (DPIA) wettelijk verplicht vóór ingebruikname.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="mt-10 pt-6 border-t-2 border-gray-100 text-sm text-gray-500 italic">
+                            <strong>Disclaimer:</strong> Dit document betreft een geautomatiseerd triage-advies en vormt geen juridisch bindend besluit. Aan deze uitkomst kunnen geen rechten worden ontleend. Raadpleeg bij structureel gebruik van nieuwe applicaties of bij twijfel over de verwerking van data altijd de Functionaris Gegevensbescherming (FG) of Information Security Officer (ISO/IB-er) van uw instelling.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-8 pt-6 flex justify-between items-center border-t border-gray-100 print:hidden">
+                      {step > 0 && step < 5 && (
+                        <button onClick={handlePrev} className="text-gray-500 hover:text-gray-800 font-medium flex items-center gap-1 px-4 py-2">
+                          <i className="ph-bold ph-caret-left text-[20px]"></i> Vorige
+                        </button>
+                      )}
+                      {step === 0 && <div></div>}
+                      {step > 0 && step < 4 && (
+                        <button onClick={handleNext} disabled={(step === 1 && !selectedTool) || (step === 2 && !useCase) || (step === 3 && !dataType)} className="bg-blue-600 disabled:bg-blue-300 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg ml-auto flex items-center gap-2">
+                          Volgende <i className="ph-bold ph-caret-right text-[20px]"></i>
+                        </button>
+                      )}
+                      {step === 4 && (
+                        <button onClick={handleGenerateAssessment} disabled={!ipRisk} className="bg-blue-600 disabled:bg-blue-300 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md ml-auto flex items-center gap-2">
+                          Genereer Advies <i className="ph ph-shield text-[20px]"></i>
+                        </button>
+                      )}
+                      {step === 5 && (
+                        <button onClick={handleReset} className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-2.5 px-6 rounded-lg ml-auto flex items-center gap-2 border border-blue-200">
+                          Nieuwe Analyse <i className="ph-bold ph-arrows-clockwise text-[16px]"></i>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'history' && (
+                  <div className="animate-in fade-in duration-300">
+                    <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">Mijn eerdere analyses</h2>
+                    {history.length === 0 ? (
+                      <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                        <i className="ph-bold ph-list text-[48px] text-gray-300 mx-auto mb-3 block"></i>
+                        <p className="text-gray-500">Je hebt nog geen analyses uitgevoerd tijdens deze sessie.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {history.map((item) => (
+                          <div key={item.id} className="p-4 border rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white hover:shadow-sm transition-shadow">
+                            <div>
+                              <div className="text-xs text-gray-400 mb-1">{item.date}</div>
+                              <h4 className="font-bold text-gray-800">{item.toolName}</h4>
+                              <p className="text-sm text-gray-500">Toepassing: {item.useCaseName}</p>
+                            </div>
+                            <div className="flex gap-2 flex-wrap text-sm">
+                               <span className={`px-3 py-1 rounded-full font-semibold border ${item.riskLevel === 'high' ? 'bg-red-50 text-red-700 border-red-200' : item.riskLevel === 'medium' ? 'bg-orange-50 text-orange-700 border-orange-200' : item.riskLevel === 'low-warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-200'}`}>AVG: {item.riskLevel.toUpperCase()}</span>
+                               <span className={`px-3 py-1 rounded-full font-semibold border ${item.aiActFlag.includes('Hoog') ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>AI-Act: {item.aiActFlag.includes('Hoog') ? 'Hoog Risico' : 'Beperkt'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'admin' && (
+                  <div className="animate-in fade-in duration-300">
+                    <div className="flex items-center gap-3 border-b pb-4 mb-6">
+                      <i className="ph-fill ph-shield-check text-[32px] text-purple-700"></i>
+                      <h2 className="text-2xl font-bold text-gray-800">FG / Privacy Officer Dashboard</h2>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-6">Overzicht van de inzet van AI-tools binnen de organisatie. In een productieomgeving worden deze gegevens centraal gelogd voor de verantwoordingsplicht (accountability) onder de AVG.</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                      <div className="bg-purple-50 p-5 rounded-xl border border-purple-100">
+                        <div className="text-purple-800 text-sm font-bold mb-1">Totaal Aanvragen</div>
+                        <div className="text-3xl font-extrabold text-purple-900">{history.length}</div>
+                      </div>
+                      <div className="bg-red-50 p-5 rounded-xl border border-red-100">
+                        <div className="text-red-800 text-sm font-bold mb-1">Hoog Risico (AVG geblokkeerd)</div>
+                        <div className="text-3xl font-extrabold text-red-900">{history.filter(h => h.riskLevel === 'high').length}</div>
+                      </div>
+                      <div className="bg-orange-50 p-5 rounded-xl border border-orange-100">
+                        <div className="text-orange-800 text-sm font-bold mb-1">AI-Act 'Hoog Risico'</div>
+                        <div className="text-3xl font-extrabold text-orange-900">{history.filter(h => h.aiActFlag.includes('Hoog')).length}</div>
+                      </div>
+                    </div>
+
+                    <h3 className="font-bold text-gray-800 mb-3">Recente Registraties</h3>
+                    <div className="overflow-x-auto border rounded-xl">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="p-3 font-semibold text-gray-600">Datum</th>
+                            <th className="p-3 font-semibold text-gray-600">Tool</th>
+                            <th className="p-3 font-semibold text-gray-600">Doel & Data</th>
+                            <th className="p-3 font-semibold text-gray-600">Compliance Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {history.length === 0 ? (
+                            <tr><td colSpan="4" className="p-4 text-center text-gray-500">Geen data beschikbaar</td></tr>
+                          ) : history.map(item => (
+                            <tr key={item.id} className="border-b last:border-0 hover:bg-gray-50">
+                              <td className="p-3 text-gray-500">{item.date.split(',')[0]}</td>
+                              <td className="p-3 font-medium">{item.toolName}</td>
+                              <td className="p-3">
+                                <div className="truncate w-48 text-gray-800 font-medium" title={item.useCaseName}>{item.useCaseName}</div>
+                                <div className="text-xs text-gray-400 truncate w-48">{item.dataTypeName}</div>
+                              </td>
+                              <td className="p-3">
+                                {item.riskLevel === 'high' ? <span className="text-red-600 font-bold">Afgewezen</span> : 
+                                 item.riskLevel === 'medium' ? <span className="text-orange-600 font-bold">DPIA / Consult FG</span> :
+                                 <span className="text-green-600 font-bold">Akkoord</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
