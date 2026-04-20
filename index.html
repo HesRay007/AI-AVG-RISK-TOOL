@@ -47,77 +47,110 @@
             name: 'ChatGPT (Gratis / Plus)', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "OpenAI gebruikt in de gratis en Plus-versies standaard jouw invoer (prompts en uploads) om hun AI-modellen te trainen. Data wordt primair verwerkt op servers in de VS. Het risico hierbij is dat ingevoerde gegevens (ook persoonsgegevens) gereproduceerd kunnen worden in antwoorden aan andere gebruikers wereldwijd. Zonder expliciete opt-out of enterprise-licentie is er geen sluitende AVG-verwerkersovereenkomst (DPA)."
+            processingRisk: 'high',
+            processingTerms: "OpenAI traint in de consumentenversies standaard op jouw prompts en uploads. Data wordt in de VS verwerkt. Er is geen sluitende AVG-verwerkersovereenkomst met de school, waardoor er een risico is dat ingevoerde gegevens door de AI gereproduceerd worden bij andere gebruikers.",
+            safeUse: "Algemene lesvoorbereiding, brainstormen over didactiek, en vertalen of redigeren van algemene, openbare teksten.",
+            unsafeUse: "Invoeren van namen van leerlingen, cijfers, ingeleverd studentenwerk (i.v.m. auteursrecht) of vertrouwelijke schooltoetsen."
           },
           { 
             id: 'copilot_edu', 
             name: 'Microsoft Copilot (met schoolaccount)', 
             dataTraining: false, 
             dpa: true,
-            processingTerms: "Wanneer je inlogt met een Entra ID (schoolaccount) is 'Commercial Data Protection' geactiveerd. Microsoft garandeert in haar onderwijsvoorwaarden dat invoer en gegenereerde antwoorden níét worden opgeslagen en níét worden gebruikt om hun basismodellen te trainen. Gegevensverwerking valt onder de robuuste, bestaande Microsoft-verwerkersovereenkomst van de instelling (veelal met dataopslag binnen de EU/EER)."
+            processingRisk: 'low',
+            processingTerms: "Dankzij 'Commercial Data Protection' (via Entra ID) garandeert Microsoft dat data niet wordt opgeslagen en niet wordt gebruikt voor AI-training. Dit valt onder de robuuste, bestaande verwerkersovereenkomst van jullie instelling met dataopslag binnen de EU/EER.",
+            safeUse: "Vrijwel alle onderwijstaken, inclusief het redigeren van correspondentie met basis persoonsgegevens (bijv. voornamen in e-mails).",
+            unsafeUse: "Geautomatiseerd beoordelen (AI-Act restrictie) of het verwerken van bijzondere persoonsgegevens (zoals medische info/BSN) zonder specifieke DPIA."
           },
           { 
             id: 'claude', 
             name: 'Claude (Anthropic)', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "Onder de standaard consumentenvoorwaarden van Anthropic behoudt het bedrijf zich het recht voor om invoer te gebruiken voor modeltraining en verbetering van de dienst. Dataverwerking en -opslag vindt voornamelijk plaats in de Verenigde Staten, wat doorgifterisico's oplevert voor persoonsgegevens zonder dat daar een getekende verwerkersovereenkomst voor de school tegenover staat."
+            processingRisk: 'high',
+            processingTerms: "Onder de standaard consumentenvoorwaarden kan Anthropic invoer gebruiken voor modeltraining. Opslag vindt plaats in de Verenigde Staten, wat leidt tot doorgifterisico's voor persoonsgegevens zonder formele DPA van de onderwijsinstelling.",
+            safeUse: "Lange, openbare documenten of literatuur samenvatten en structureren zonder persoonsgegevens.",
+            unsafeUse: "Uploaden van studentenwerk voor feedback (privacy en auteursrecht), of het delen van strategische schoolbeleidsstukken."
           },
           { 
             id: 'midjourney', 
             name: 'Midjourney', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "Standaard zijn alle gegenereerde afbeeldingen en de gebruikte prompts openbaar zichtbaar in de openbare Midjourney galerij. Daarnaast behoudt Midjourney het recht om de invoer (inclusief referentie-afbeeldingen) te gebruiken voor verdere training van hun modellen. Dit maakt de tool fundamenteel ongeschikt en risicovol voor enige vorm van privacygevoelige, herleidbare of auteursrechtelijk beschermde visuele data."
+            processingRisk: 'high',
+            processingTerms: "Prompts en gegenereerde beelden zijn standaard openbaar in de Midjourney galerij. Het model traint continu verder op alle gebruikersinvoer. Visuele data is hierdoor fundamenteel onbeschermd.",
+            safeUse: "Genereren van algemene, sfeervolle illustraties (bijv. 'een Romeinse markt') voor in lespresentaties met behulp van anonieme tekst-prompts.",
+            unsafeUse: "Uploaden van foto's van leerlingen, docenten of het schoolgebouw als referentiemateriaal (image-to-image)."
           },
           { 
             id: 'heygen', 
             name: 'HeyGen', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "HeyGen verwerkt sterk gevoelige data (zoals stem en gezicht/biometrie) op cloudservers (veelal via AWS, wereldwijd). Hoewel ze stellen data niet te verkopen, bieden de standaardvoorwaarden onvoldoende garanties tegen AI-training en ontbreekt een specifieke EU-onderwijs-DPA. Het invoeren van beeldmateriaal van studenten of docenten is zonder toestemming en formele overeenkomst een zeer groot privacyrisico (AVG)."
+            processingRisk: 'high',
+            processingTerms: "Verwerkt biometrische data (stem/gezicht) op cloudservers wereldwijd. De standaardvoorwaarden sluiten AI-training niet uit en missen een specifieke EU-onderwijs-DPA.",
+            safeUse: "Video's genereren met de kant-en-klare, standaard AI-avatars van HeyGen die algemene lesstof presenteren.",
+            unsafeUse: "Klonen van de stem of het gezicht van jezelf, collega's of leerlingen zonder expliciete schriftelijke toestemming en FG-goedkeuring."
           },
           { 
             id: 'gamma', 
             name: 'Gamma.AI', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "De standaard (gratis en pro) versie kent geen sluitende verwerkersovereenkomst die voldoet aan de Nederlandse onderwijseisen. Data (inclusief geüploade documenten voor presentaties) wordt veelal op Amerikaanse servers verwerkt en kan gebruikt worden om de dienstverlening te optimaliseren. Opslag van persoonsgegevens in deze tool vormt direct een compliancerisico."
+            processingRisk: 'high',
+            processingTerms: "De standaardversie kent geen verwerkersovereenkomst voor Nederlands onderwijs. Data wordt veelal op Amerikaanse servers verwerkt en kan gebruikt worden om de dienstverlening te optimaliseren.",
+            safeUse: "Genereren van snelle, visuele presentaties op basis van algemene theorie of geanonimiseerde steekwoorden.",
+            unsafeUse: "Invoeren van interne schoolbeleidsstukken, of presentaties maken waarin namen van leerlingen voorkomen."
           },
           { 
             id: 'notebooklm', 
             name: 'NotebookLM (Google)', 
             dataTraining: false, 
             dpa: false,
-            processingTerms: "Google specificeert in de voorwaarden dat geüploade brondocumenten in NotebookLM níét worden gebruikt om hun basismodellen te trainen. Echter, tenzij het gebruik expliciet is afgedekt binnen een overkoepelende 'Google Workspace for Education' overeenkomst van de instelling, val je onder de algemene consumentenvoorwaarden. Hierbij ontbreekt de formele juridische borging (DPA) die vereist is voor de structurele verwerking van persoonsgegevens."
+            processingRisk: 'medium',
+            processingTerms: "Hoewel Google aangeeft in NotebookLM géén basismodellen te trainen met jouw uploads, val je zonder expliciete afdekking in jullie Workspace-contract onder de consumentenvoorwaarden. De formele, juridische AVG-borging ontbreekt dan.",
+            safeUse: "Uploaden van eigen (openbare) lesmaterialen, rapporten of boeken om deze als persoonlijke AI-assistent te bevragen.",
+            unsafeUse: "Uploaden van ingeleverde verslagen van studenten (auteursrecht/privacy) of vertrouwelijke HR/zorg-dossiers."
           },
           { 
             id: 'genially', 
             name: 'Genially', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "Onder de standaard consumentenvoorwaarden wordt ingevoerde data verwerkt om de online dienst te leveren en te optimaliseren. Hoewel Genially deels Europees is, is er bij een standaard account geen getekende verwerkersovereenkomst. Het risico is beperkt bij pure lesstof, maar hoog zodra je persoonsgegevens (zoals namen van studenten in escape-rooms) of cijfers verwerkt."
+            processingRisk: 'medium',
+            processingTerms: "Grotendeels Europees, maar bij een standaard (gratis) docentaccount ontbreekt vaak de formele Verwerkersovereenkomst. Data wordt gebruikt voor dienstoptimalisatie.",
+            safeUse: "Ontwerpen van interactieve lesmodules en escape-rooms met algemene les-content.",
+            unsafeUse: "Leerlingen verplichten accounts aan te maken (zonder contract), of namen/cijfers van studenten in de modules opnemen."
           },
           { 
             id: 'gemini_free', 
             name: 'Gemini (Gratis)', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "Valt onder de standaard Google-consumentenvoorwaarden. Google geeft zeer expliciet aan dat gesprekken en invoer kunnen worden gelezen door menselijke reviewers (annotators) ter kwaliteitscontrole, en gebruikt worden om Google-producten en AI-modellen te trainen. Het invoeren van enige vorm van persoonsgegevens, vertrouwelijke informatie of leerlingdata is hierdoor een acuut datalek en zeer hoog risico."
+            processingRisk: 'high',
+            processingTerms: "Onder de consumentenvoorwaarden kunnen gesprekken door menselijke reviewers gelezen worden ter kwaliteitscontrole, en worden gebruikt voor AI-training. Een hoog risico op datalekken.",
+            safeUse: "Snel actuele, algemene feiten opzoeken of brainstormen over didactiek zonder enige leerling- of schoolcontext.",
+            unsafeUse: "Elke vorm van invoer met leerlingdata, ingeleverd werk, of bedrijfsvertrouwelijke informatie (zoals toetsvragen)."
           },
           { 
             id: 'gemini_edu', 
             name: 'Gemini (met schoolaccount)', 
             dataTraining: false, 
             dpa: true,
-            processingTerms: "Bij inlog met een 'Google Workspace for Education' account gelden de enterprise-voorwaarden. Google garandeert hierin dat jouw prompts (invoer) en de gegenereerde antwoorden níét worden gebruikt om de Gemini basismodellen te trainen, en ook niet toegankelijk zijn voor menselijke reviewers. Dit valt onder de bestaande, getekende verwerkersovereenkomst met de school, waardoor dit het laagste risicoprofiel heeft voor dataverwerking."
+            processingRisk: 'low',
+            processingTerms: "Bij gebruik via 'Google Workspace for Education' gelden de enterprise-voorwaarden. Geen AI-training op invoer, geen menselijke reviewers, en gedekt door de bestaande school-DPA.",
+            safeUse: "Analyseren van documenten en opstellen van formatieve feedback (met dataminimalisatie).",
+            unsafeUse: "Zonder menselijke controle ('Human in the loop') beslissende cijfers of oordelen laten genereren (AI-Act)."
           },
           { 
             id: 'other', 
             name: 'Een andere (onbekende) AI-tool', 
             dataTraining: true, 
             dpa: false,
-            processingTerms: "Omdat de specifieke voorwaarden van deze tool onbekend zijn, gaat de analyse uit van het 'worst-case' scenario voor consumententools. Dit betekent: data wordt veelal verwerkt in de VS zonder adequate waarborgen (risico op onrechtmatige doorgifte), de invoer wordt gebruikt om het AI-model verder te trainen (risico op een datalek), en er ontbreekt een wettelijk verplichte Verwerkersovereenkomst (DPA)."
+            processingRisk: 'high',
+            processingTerms: "Aanname van 'worst-case' scenario voor consumententools: data wordt in de VS verwerkt, gebruikt voor training (datalek-risico), en er ontbreekt een wettelijk verplichte Verwerkersovereenkomst.",
+            safeUse: "Alleen generieke, openbare informatie invoeren (bijv. weerberichten, algemene formules of spellingscontrole).",
+            unsafeUse: "Elke verwerking van persoonsgegevens, auteursrechtelijk materiaal of vertrouwelijke bestanden is onrechtmatig."
           },
         ];
 
@@ -169,6 +202,19 @@
             { id: 'oth2', label: 'Didactische inzet (presentaties, video)', levels: ['didactic'], aiActHighRisk: false },
             { id: 'oth3', label: 'Nakijken of begeleiden van leerlingen', levels: ['guidance', 'prep'], aiActHighRisk: true },
           ]
+        };
+
+        const getProcessingRiskStyles = (risk) => {
+          switch(risk) {
+            case 'high': 
+              return { bg: 'bg-red-50 border-red-200', border: 'bg-red-500', icon: 'text-red-600', badge: 'bg-red-100 text-red-800', label: 'Hoog Risico (Openbaar/Geen DPA)' };
+            case 'medium': 
+              return { bg: 'bg-orange-50 border-orange-200', border: 'bg-orange-500', icon: 'text-orange-600', badge: 'bg-orange-100 text-orange-800', label: 'Gemiddeld Risico' };
+            case 'low': 
+              return { bg: 'bg-green-50 border-green-200', border: 'bg-green-500', icon: 'text-green-600', badge: 'bg-green-100 text-green-800', label: 'Laag Risico (Afgeschermd)' };
+            default: 
+              return { bg: 'bg-blue-50 border-blue-200', border: 'bg-blue-500', icon: 'text-blue-600', badge: 'bg-blue-100 text-blue-800', label: 'Onbekend' };
+          }
         };
 
         function App() {
@@ -345,6 +391,9 @@
             window.html2pdf().set(opt).from(element).save();
           };
 
+          const activeTool = AI_TOOLS.find(t=>t.id===selectedTool);
+          const toolRiskStyles = activeTool ? getProcessingRiskStyles(activeTool.processingRisk) : null;
+
           return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 font-sans text-gray-800 print:bg-white print:py-0 print:px-0">
               <div className="max-w-4xl w-full flex gap-2 mb-4 print:hidden">
@@ -480,7 +529,7 @@
                       </div>
                     )}
 
-                    {step === 5 && currentResult && (
+                    {step === 5 && currentResult && activeTool && (
                       <div className="flex-1 flex flex-col animate-in fade-in duration-500">
                         <div className="mb-4 flex flex-wrap gap-3 justify-end print:hidden">
                           <button onClick={() => setShowExtendedReport(!showExtendedReport)} className="bg-white hover:bg-purple-50 text-purple-700 font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors border border-purple-200 shadow-sm">
@@ -504,7 +553,7 @@
                             <div>
                               <h2 className="text-2xl font-bold text-gray-900 mb-3">Compliance Adviesrapport (Triage)</h2>
                               <div className="flex flex-wrap gap-2 text-sm">
-                                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-full">Tool: <strong>{AI_TOOLS.find(t=>t.id===selectedTool)?.name}</strong></span>
+                                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-full">Tool: <strong>{activeTool.name}</strong></span>
                                 <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-full">Doel: <strong>{getFilteredUseCases().find(u=>u.id===useCase)?.label}</strong></span>
                               </div>
                             </div>
@@ -528,14 +577,29 @@
                             </div>
                           </div>
 
-                          <div className="bg-white border border-blue-200 rounded-xl p-5 shadow-sm mb-6 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                            <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2 border-b pb-2">
-                              <i className="ph-fill ph-database text-[20px] text-blue-600"></i> 3. Dataverwerking & Standaardvoorwaarden ({AI_TOOLS.find(t=>t.id===selectedTool)?.name})
-                            </h4>
-                            <p className="text-gray-700 text-sm leading-relaxed">
-                              {AI_TOOLS.find(t=>t.id===selectedTool)?.processingTerms}
+                          <div className={`border rounded-xl p-5 shadow-sm mb-6 relative overflow-hidden ${toolRiskStyles.bg}`}>
+                            <div className={`absolute top-0 left-0 w-1 h-full ${toolRiskStyles.border}`}></div>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200/50 pb-3 mb-3 gap-2">
+                              <h4 className="font-bold text-gray-800 flex items-center gap-2">
+                                <i className={`ph-fill ph-database text-[20px] ${toolRiskStyles.icon}`}></i> 3. Dataverwerking ({activeTool.name})
+                              </h4>
+                              <span className={`text-xs font-bold px-2 py-1 rounded-full w-fit ${toolRiskStyles.badge}`}>
+                                {toolRiskStyles.label}
+                              </span>
+                            </div>
+                            <p className="text-gray-700 text-sm leading-relaxed mb-4">
+                              {activeTool.processingTerms}
                             </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <h5 className="font-bold text-green-800 text-xs flex items-center gap-1 mb-2"><i className="ph-fill ph-check-circle text-[16px]"></i> Veilig gebruik</h5>
+                                <p className="text-xs text-green-700 leading-relaxed">{activeTool.safeUse}</p>
+                              </div>
+                              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                 <h5 className="font-bold text-red-800 text-xs flex items-center gap-1 mb-2"><i className="ph-fill ph-x-circle text-[16px]"></i> Onveilig gebruik</h5>
+                                 <p className="text-xs text-red-700 leading-relaxed">{activeTool.unsafeUse}</p>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm">
