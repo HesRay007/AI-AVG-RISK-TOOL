@@ -38,7 +38,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
         // --- CONFIGURATIE VAN TOOLS EN REGELS ---
         const AI_TOOLS = [
@@ -183,6 +183,11 @@
           const [currentResult, setCurrentResult] = useState(null);
           
           const [showExtendedReport, setShowExtendedReport] = useState(false);
+
+          // Zorgt ervoor dat de browser bij elke nieuwe stap of tab naar boven scrolt
+          useEffect(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, [step, activeTab]);
 
           const handleNext = () => setStep(prev => prev + 1);
           const handlePrev = () => setStep(prev => prev - 1);
@@ -363,7 +368,7 @@
                         <h1 className="text-2xl font-bold text-gray-800">AI, AVG & AI-Act Risico Scanner</h1>
                       </div>
                       <div className="text-sm font-medium text-gray-400">
-                        Stap {step === 0 ? '0' : step} van 4
+                        Stap {step === 0 ? '0' : (step > 4 ? 4 : step)} van 4
                       </div>
                     </div>
 
@@ -378,7 +383,7 @@
                         <i className="ph-fill ph-book-open-text text-[64px] text-blue-500 mb-6"></i>
                         <h2 className="text-3xl font-extrabold mb-4 text-gray-900">Veilig innoveren met AI</h2>
                         <p className="text-lg text-gray-600 max-w-2xl mb-8">
-                          Voordat je een AI-tool inzet in het onderwijs, wil je weten of dit voldoet aan de <strong>privacywetgeving (AVG)</strong> en de nieuwe <strong>Europese AI-Act</strong>. Beantwoord enkele korte vragen voor een direct advies op maat.
+                          Voordat je een AI-tool inzet in het onderwijs, moeten we controleren of dit voldoet aan de <strong>privacywetgeving (AVG)</strong> en de nieuwe <strong>Europese AI-Act</strong>. Beantwoord enkele korte vragen voor een direct juridisch advies op maat.
                         </p>
                         <button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all flex items-center gap-2">
                           Start de Analyse <i className="ph-bold ph-caret-right text-[20px]"></i>
@@ -709,4 +714,5 @@
         root.render(<App />);
     </script>
 </body>
+</html>
 </html>
